@@ -1,0 +1,5 @@
+services:
+  Victim:
+    image: example/webapp
+    ports:
+      - "8000:5000"
