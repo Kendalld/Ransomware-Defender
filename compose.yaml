@@ -1,5 +1,9 @@
 services:
   Victim:
-    image: example/webapp
+    image: victimserver
     ports:
       - "8000:5001"
+  Attacker:
+    image: victimserver
+    ports:
+      - "8001:5001"
