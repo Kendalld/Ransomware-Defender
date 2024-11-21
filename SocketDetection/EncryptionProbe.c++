@@ -59,12 +59,18 @@ int main(void){
     // Setup first sequence of cmsghdr to store operations
     struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);     // Returns pointer to cmsghdr struct from msghdr to set cmsghdr attributes
     cmsg->cmsg_len = CMSG_LEN(sizeof(uint32_t));    // data byte count including cmsghdr
-    cmsg->cmsg_level = SOL_ALG;                     // symetric encryption algorithm protocol
-    cmsg->cmsg_type = ALG_SET_OP;                   // socket performs operations.
+    cmsg->cmsg_level = SOL_ALG;                     // Symetric encryption algorithm protocol
+    cmsg->cmsg_type = ALG_SET_OP;                   // Socket performs operations.
     *((uint32_t *)CMSG_DATA(cmsg)) = ALG_OP_ENCRYPT;// Operation of Encrypt Or Decrypt. Points to data array in Ancillary data
 
     // Setups up next sequence of cmsghdr structure
-    cmsg = CMSG_NXTHDR(&msg, cmsg);
+    cmsg = CMSG_NXTHDR(&msg, cmsg);                 // Cmsg points to next sequence of cmsghdr.
+    cmsg->csmg_len = CMSG_LEN(sizeof(struct af_alg_iv) + IV_LEN);   // Af_alg_iv struct + 16 Bytes.
+    cmsg->cmsg_level = SOL_ALG;
+    cmsg->cmsg_type = ALG_SET_IV;
+    ((struct af_alg_iv *))CMSG_DATA(cmsg)->ivlen = IV_LEN   // Set IV length to 16 Bytes.
+    memcpy(((struct af_alg_iv *)CMSG_DATA(cmsg))-> iv, iv, IV_LEN); // copies data from iv array into CMSG data array which is 16 Bytes.
+    sendmsg(aes_ctr, &msg, 0);                                      // Sends system call to kernal space.
 
     // Set up pipes for Zero-Copy interface
 
