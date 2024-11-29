@@ -1,8 +1,10 @@
 FROM ubuntu:latest
-WORKDIR /usr/src/app 
+WORKDIR /app
 EXPOSE 5001
-COPY . .
-RUN apt-get update
-RUN apt-get install upgrade
-RUN make
-CMD ["./SocketEncrypt"]
+COPY . /app
+RUN apt update
+RUN apt -y install make
+RUN apt install -y build-essential
+RUN make -d
+#CMD ["./SocketEncrypt"]
+CMD ["sleep", "infinity"]
