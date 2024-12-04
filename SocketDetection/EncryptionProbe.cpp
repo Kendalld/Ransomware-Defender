@@ -9,6 +9,7 @@ program will demonstrate a encryption system call an attacker may use.
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -40,6 +41,24 @@ int main(void){
     char dst[16] = {0};
     char afalg_plain[16] = {0};
 
+    // Open file and return file descriptor
+    int fd;
+    fd = open("ImportantInfo.txt", O_RDWR);
+    if (fd == -1){
+        perror("Could not open file");
+    }
+    struct stat file_stat;
+    if(fstat(fd, &file_stat) == -1){
+        perror("fstat");
+    }
+
+    int fdsize = file_stat.st_size;
+    printf("The size of file is: %d bytes\n", fdsize);
+
+    int plaintxtlen = fdsize/sizeof(u_char);
+    u_char plaintxt[plaintxtlen] = {0};
+    u_char ciphertxt[plaintxtlen] = {0};
+
     struct sockaddr_alg sa = {
 		.salg_family = AF_ALG,
 		.salg_type = "skcipher",
@@ -64,8 +83,9 @@ int main(void){
         perror("accepting connections failed");
         return 1;
     }
+
     struct msghdr msg = {};
-	struct cmsghdr *cmsg;
+	struct cmsghdr *cmsg;           // Refer to https://github.com/torvalds/linux/blob/aaf20f870da056752f6386693cc0d8e25421ef35/net/sctp/socket.c#L8807 for breakdown of cmsghdr Structure
 	char cbuf[CMSG_SPACE(4)] = {0};
 	struct iovec iov;
 
@@ -78,14 +98,50 @@ int main(void){
 	cmsg->cmsg_len = CMSG_LEN(4);
 	*(__u32 *)CMSG_DATA(cmsg) = ALG_OP_ENCRYPT;
 
-	iov.iov_base = (char *)plain_text;
-	iov.iov_len = sizeof(dst);
+
+    if(read(fd, plaintxt, fdsize) == -1){
+        perror("read 1");
+    }
+
+    fflush(stdout);
+    printf("This is in plaintxt: %s\n", plaintxt);
+    iov.iov_base = (char *)plaintxt;
+	iov.iov_len = sizeof(plaintxt);
+
+	// iov.iov_base = (char *)plain_text;
+	// iov.iov_len = sizeof(dst);
 
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 
-	sendmsg(opfd, &msg, 0);
-	printf("The amount of bytes read are :%ld. The characters stored in dst are: %s",read(opfd, dst, sizeof(dst)), dst);
+	printf("The output of sendmsg: %d\n",sendmsg(opfd, &msg, 0));
+    if(read(opfd, ciphertxt, plaintxtlen) == -1){
+        perror("read 2");
+    }
+
+    printf("The CipherTxt is: %s\n",ciphertxt);
+
+    // Decrypt
+    cmsg = CMSG_FIRSTHDR(&msg);
+	cmsg->cmsg_level = SOL_ALG;
+	cmsg->cmsg_type = ALG_SET_OP;
+	cmsg->cmsg_len = CMSG_LEN(4);
+	*(__u32 *)CMSG_DATA(cmsg) = ALG_OP_DECRYPT;
+
+    fflush(stdout);
+    printf("This is in ciphertxt: %s\n", ciphertxt);
+    iov.iov_base = (char *)ciphertxt;
+	iov.iov_len = sizeof(ciphertxt);
+
+    printf("The output of sendmsg: %d\n",sendmsg(opfd, &msg, 0));
+    if(read(opfd, plaintxt, plaintxtlen) == -1){
+        perror("read 3");
+    }
+
+    printf("The Plaintxt is: %s\n",plaintxt);
+
+
+	//printf("The amount of bytes read are :%ld. The characters stored in dst are: %s",read(opfd, dst, sizeof(dst)), dst);
 
     
     // // Fill test data

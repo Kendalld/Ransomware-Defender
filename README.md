@@ -10,3 +10,6 @@ To setup build the container do the following:
 2) Set up attacker client
 
 To simulate attack and a victim run command `docker compose up -d`
+
+
+`docker build -t socketdetection .`
