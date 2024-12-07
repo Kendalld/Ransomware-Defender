@@ -90,7 +90,7 @@ void cryptFile(char *FileName, bool encrypt){
 
     struct msghdr msg = {};
 	struct cmsghdr *cmsg;           // Refer to https://github.com/torvalds/linux/blob/aaf20f870da056752f6386693cc0d8e25421ef35/net/sctp/socket.c#L8807 for breakdown of cmsghdr Structure
-	char cbuf[CMSG_SPACE(4) + CMSG_SPACE(sizeof(struct af_alg_iv))] = {};  // Insures that theres enough space for cmsghdr and 4 bytes(int) to store Encrypt or Decrypt macro
+	char cbuf[CMSG_SPACE(4)/*+ CMSG_SPACE(sizeof(struct af_alg_iv))*/] = {};  // Insures that theres enough space for cmsghdr and 4 bytes(int) to store Encrypt or Decrypt macro
 	struct iovec iov;
 
 	msg.msg_control = cbuf;
@@ -102,12 +102,12 @@ void cryptFile(char *FileName, bool encrypt){
 	cmsg->cmsg_len = CMSG_LEN(4);
 	*(__u32 *)CMSG_DATA(cmsg) = encrypt ? ALG_OP_ENCRYPT : ALG_OP_DECRYPT;
 
-    CMSG_NXTHDR(&msg, cmsg);
-    cmsg->cmsg_level = SOL_ALG;
-    cmsg->cmsg_type = ALG_SET_IV;
-    cmsg->cmsg_len = CMSG_LEN(sizeof(struct af_alg_iv));
-    ((struct af_alg_iv *)CMSG_DATA(cmsg))->ivlen = IV_LEN;            // Sets length of IV.
-    memcpy(((struct af_alg_iv *)CMSG_DATA(cmsg))->iv, iv, IV_LEN);
+    // CMSG_NXTHDR(&msg, cmsg);
+    // cmsg->cmsg_level = SOL_ALG;
+    // cmsg->cmsg_type = ALG_SET_IV;
+    // cmsg->cmsg_len = CMSG_LEN(sizeof(struct af_alg_iv));
+    // ((struct af_alg_iv *)CMSG_DATA(cmsg))->ivlen = IV_LEN;            // Sets length of IV.
+    // memcpy(((struct af_alg_iv *)CMSG_DATA(cmsg))->iv, iv, IV_LEN);
 
     // Storedata from file into iotxt buffer.
     if(read(fd, inputtxt, fdsize) == -1){
